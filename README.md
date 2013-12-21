@@ -86,6 +86,8 @@ The rules file has several directives:
 
 * jiraurl
 * ignore
+* forcelowercase
+* issuefilters
 * replace
 * merge
 * ignore
@@ -108,6 +110,27 @@ expressions). Example:
 ```
 
 This will ignore any labels starting with "collector-".
+
+The forcelowercase directive tells Label Bot whether or not
+you want to force all labels to be lowercase. "1" (default)
+means yes and "0" means no.
+
+```
+	"forcelowercase": "1",
+```
+
+The issuefilters directive allows you to filter the jira
+query to only a subset of the issues in your jira instance.
+Maybe you just want to operate on issues in one project:
+
+```
+	"issuefilters": {
+			"project": "RAD"
+	},
+```
+
+You can remove the issuefilters directive completely if
+you want to consider all issues in your jira instance.
 
 The replace directive allows you to replace one label with another.
 Example:

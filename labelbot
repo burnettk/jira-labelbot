@@ -71,6 +71,13 @@ my $needmore = 1;
 my @issues;
 my $client = REST::Client->new();
 my $jql = "labels+is+not+empty+order+by+updated+desc";
+my $issuefilters = $rules->{issuefilters};
+
+while ( ($key, $value) = each %{$issuefilters} )
+{
+	$jql = "$key=$value+and+$jql"
+}
+
 my $url = $rules->{jiraurl}.'/rest/api/2/search?jql='.$jql.'&fields=labels&startAt='.$at.'&maxResults='.$per;
 while ($needmore) {
 	$client->addHeader('Authorization', "Basic $cred");

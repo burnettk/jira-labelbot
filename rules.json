@@ -1,9 +1,13 @@
 {
 	"jiraurl": "https://jira.yourcompany.com",
-	"forcelowercase": "1",
 	"ignore": [
 		"collector-.*"
 	],
+	"forcelowercase": "1",
+	"issuefilters": {
+			"project": "RAD",
+			"component": "SAQ"
+	},
 	"replace": {
 		"mail": "email",
 		"cert": "certificate"
