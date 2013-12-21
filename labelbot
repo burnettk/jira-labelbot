@@ -9,7 +9,7 @@
 use Getopt::Long;
 
 # Options
-my $rulesfile = './labelbot.rules';
+my $rulesfile = './rules.json';
 my $credfile = './labelbot.cred';
 my $mkcred;
 my $test = 0;
@@ -24,7 +24,7 @@ my $opt = GetOptions(	"rules=s"	=> \$rulesfile,
 if ($help) {
 	print "Usage: labelbot [options]\n\n";
 	print "Options:\n";
-	print "\t--rules=file     Specify a rules file (default=./labelbot.rules).\n";
+	print "\t--rules=file     Specify a rules file (default=./rules.json).\n";
 	print "\t--cred=file      Specify a credentials file (default=./labelbot.cred).\n";
 	print "\t--mkcred=creds   Converts credentials to base64 format for credentials file.\n";
 	print "\t                 Example: --mkcred=username:password\n";

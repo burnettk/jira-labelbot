@@ -28,7 +28,7 @@ Usage: labelbot [options]
 
 Options:
 
-	--rules=file     Specify a rules file (default=./labelbot.rules).
+	--rules=file     Specify a rules file (default=./rules.json).
 	--cred=file      Specify a credentials file (default=./labelbot.cred).
 	--mkcred=creds   Converts credentials to base64 format for credentials file.
 	                 Example: --mkcred=username:password
@@ -78,8 +78,9 @@ user. Set appropriate permissions on your credentials file.
 ### 4. Create your rules file
 
 A default rules file has been included, called 
-./labelbot.rules. The rules file is in JSON (JavaScript
+./rules.json. The rules file is in JSON (JavaScript
 Object Notation) format, and can easily be edited by hand.
+the sample into place like this:
 
 The rules file has several directives:
 
@@ -147,7 +148,7 @@ replacing them with anything. Example:
 
 ### 5. Running Label Bot
 
-Once you have labelbot.cred and labelbot.rules in place, you're ready
+Once you have labelbot.cred and rules.json in place, you're ready
 to run Label Bot. Label Bot will output some details about what it's
 doing with each issue. You'll likely want to redirect this output
 to a log file. Example:
