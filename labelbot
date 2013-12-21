@@ -78,11 +78,10 @@ while ( ($key, $value) = each %{$issuefilters} )
 	$jql = "$key=$value+and+$jql"
 }
 
-my $url = $rules->{jiraurl}.'/rest/api/2/search?jql='.$jql.'&fields=labels&startAt='.$at.'&maxResults='.$per;
 while ($needmore) {
+	my $url = $rules->{jiraurl}.'/rest/api/2/search?jql='.$jql.'&fields=labels&startAt='.$at.'&maxResults='.$per;
 	$client->addHeader('Authorization', "Basic $cred");
 	$client->addHeader('Content-Type', "application/json");
-	print "\n\ngetting: " . $url;
 	$client->GET($url);
 	my $j = from_json($client->responseContent());
 	push @issues, @{$j->{issues}};
