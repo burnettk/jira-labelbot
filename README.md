@@ -1,7 +1,5 @@
 # jira-labelbot
 
-## About Label Bot
-
 Label Bot makes maintaining labels on Jira issues easy by automatically replacing, 
 merging and removing labels based on a set of easily configurable rules.
 
@@ -17,6 +15,7 @@ Label Bot performs the following actions on labels found in your Jira instance:
 
 Label Bot is a Perl script. It expects to find your perl executable under /usr/bin/perl.
 The following Perl modules are required:
+
 	Getopt::Long
 	REST::Client
 	JSON
@@ -28,6 +27,7 @@ The following Perl modules are required:
 Usage: labelbot [options]
 
 Options:
+
 	--rules=file     Specify a rules file (default=./labelbot.rules).
 	--cred=file      Specify a credentials file (default=./labelbot.cred).
 	--mkcred=creds   Converts credentials to base64 format for credentials file.
@@ -79,7 +79,7 @@ user. Set appropriate permissions on your credentials file.
 
 A default rules file has been included, called 
 ./labelbot.rules. The rules file is in JSON (JavaScript
-Object Notation) format, but can easily be edited by hand.
+Object Notation) format, and can easily be edited by hand.
 
 The rules file has several directives:
 
