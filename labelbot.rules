@@ -1,5 +1,6 @@
 {
 	"jiraurl": "https://jira.yourcompany.com",
+	"forcelowercase": "0",
 	"ignore": [
 		"collector-.*"
 	],

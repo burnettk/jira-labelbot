@@ -70,9 +70,13 @@ my $at = 0;
 my $needmore = 1;
 my @issues;
 my $client = REST::Client->new();
+my $jql = "labels+is+not+empty+order+by+updated+desc";
+my $url = $rules->{jiraurl}.'/rest/api/2/search?jql='.$jql.'&fields=labels&startAt='.$at.'&maxResults='.$per;
 while ($needmore) {
 	$client->addHeader('Authorization', "Basic $cred");
-	$client->GET($rules->{jiraurl}.'/rest/api/2/search?jql=labels+is+not+empty+order+by+updated+desc&fields=labels&startAt='.$at.'&maxResults='.$per);
+	$client->addHeader('Content-Type', "application/json");
+	print "\n\ngetting: " . $url;
+	$client->GET($url);
 	my $j = from_json($client->responseContent());
 	push @issues, @{$j->{issues}};
 	$needmore = 0 if (@issues >= $j->{total});
@@ -142,10 +146,10 @@ sub update_issue($$$) {
 	printf "adding: %s\n", $add;
 	my $updhash = { "update" => { "labels" => [] }};
 	for my $r ($rem->members) {
-		push $updhash->{update}{labels}, {"remove"=>$r};
+		push @{$updhash->{update}{labels}}, {"remove"=>$r};
 	}
 	for my $a ($add->members) {
-		push $updhash->{update}{labels}, {"add"=>$a};
+		push @{$updhash->{update}{labels}}, {"add"=>$a};
 	}
 	my $json = encode_json($updhash);
 	printf "json: %s\n", $json;
@@ -175,12 +179,12 @@ sub review($) {
 	for my $l ($new->members) {
 		# Make replacements
 		my $dict = replace($l);
+		my $forcelowercase = $rules->{forcelowercase};
 		if (defined($dict)) {
 			$new->delete($l);
 			$new->insert($dict);
-
-		# Force lower case
-		} elsif ($l =~ /[A-Z]/) {
+		# Force lower case if configured to do so and word contains uppercase
+		} elsif ($forcelowercase && $l =~ /[A-Z]/) { 
 			$new->delete($l);
 			$new->insert(lc $l);
 		}
@@ -197,15 +201,15 @@ sub review($) {
 	my $rem = $old - $new;
 	my $add = $new - $old;
 
-	printf "key: %s\n", $key;
-	printf "old: %s\n", $old;
-	printf "new: %s\n", $new;
-	printf "rem: %s\n", join(', ', $rem->members);
-	printf "add: %s\n", join(', ', $add->members);
-	print "\n";
-
 	# Perform the update in Jira
 	if (!$rem->is_empty || !$add->is_empty) {
+		printf "key: %s\n", $key;
+		printf "old: %s\n", $old;
+		printf "new: %s\n", $new;
+		printf "rem: %s\n", join(', ', $rem->members);
+		printf "add: %s\n", join(', ', $add->members);
+		print "\n";
+
 		$updatecount++;
 		update_issue($key, $rem, $add) unless $test;
 	}
