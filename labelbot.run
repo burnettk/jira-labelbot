@@ -1,0 +1,7 @@
+#!/bin/bash
+
+RUNDIR=~/labelbot
+LOGDIR=$RUNDIR/logs
+
+cd $RUNDIR
+$RUNDIR/labelbot > $LOGDIR/labelbot-`date +%Y%m%d%H%M%S`.log

@@ -1,0 +1,2 @@
+0 * * * * ~/labelbot/labelbot.run
+0 0 * * * find ~/labelbot/logs -mtime +7 | xargs rm

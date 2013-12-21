@@ -1,0 +1,24 @@
+{
+	"jiraurl": "https://jira.yourcompany.com",
+	"ignore": [
+		"collector-.*"
+	],
+	"replace": {
+		"mail": "email",
+		"cert": "certificate"
+	},
+	"merge": [
+		{
+			"from": [ "password", "reset" ],
+			"to": "password-reset"
+		},
+		{
+			"from": [ "email", "quota" ],
+			"to": "email-quota"
+		}
+	],
+	"remove": [
+		"badlabel",
+		"verybadlabel"
+	]
+}

@@ -1,0 +1,213 @@
+#!/usr/bin/perl
+#
+# Labelbot : Automated maintenance of Jira labels.
+# Version 1.0 (updated 2013-04-03)
+# Copyright Andrew Culver
+# 
+# Run with --help option for usage.
+
+use Getopt::Long;
+
+# Options
+my $rulesfile = './labelbot.rules';
+my $credfile = './labelbot.cred';
+my $mkcred;
+my $test = 0;
+my $help = 0;
+my $opt = GetOptions(	"rules=s"	=> \$rulesfile,
+			"cred=s"	=> \$credfile,
+			"mkcred=s"	=> \$mkcred,
+			"test"		=> \$test,
+			"help"		=> \$help);
+
+# Help
+if ($help) {
+	print "Usage: labelbot [options]\n\n";
+	print "Options:\n";
+	print "\t--rules=file     Specify a rules file (default=./labelbot.rules).\n";
+	print "\t--cred=file      Specify a credentials file (default=./labelbot.cred).\n";
+	print "\t--mkcred=creds   Converts credentials to base64 format for credentials file.\n";
+	print "\t                 Example: --mkcred=username:password\n";
+	print "\t                 (Note: This is NOT encrypted. Protect your cred file.\n";
+	print "\t--test           Review issues and output a summary without modifying labels.\n";
+	print "\t--help           Output this usage.\n";
+	exit;
+}
+
+use REST::Client;
+use JSON;
+use Set::Scalar;
+
+# Generate credentials
+if (defined($mkcred)) {
+	use MIME::Base64;
+	print encode_base64($mkcred);
+	exit;
+}
+
+# Load rules file
+local $/;
+open(my $rulefh, '<', $rulesfile);
+my $ruletxt = <$rulefh>;
+my $rules = decode_json($ruletxt);
+
+# Load credentials file
+open(my $credfh, '<', $credfile);
+my $cred = <$credfh>;
+chop $cred;
+
+# Create some Sets to perform label merging
+my @merge_froms = ();
+my @merge_tos = ();
+for my $m (@{$rules->{merge}}) {
+	push @merge_froms, Set::Scalar->new(@{$m->{from}});
+	push @merge_tos, $m->{to};
+}
+
+# Query Jira for all the issues which have labels
+my $per = 500;
+my $at = 0;
+my $needmore = 1;
+my @issues;
+my $client = REST::Client->new();
+while ($needmore) {
+	$client->addHeader('Authorization', "Basic $cred");
+	$client->GET($rules->{jiraurl}.'/rest/api/2/search?jql=labels+is+not+empty+order+by+updated+desc&fields=labels&startAt='.$at.'&maxResults='.$per);
+	my $j = from_json($client->responseContent());
+	push @issues, @{$j->{issues}};
+	$needmore = 0 if (@issues >= $j->{total});
+	$at += $per;
+}
+
+# Review each issue
+my $updatecount = 0;
+printf "Processing %d issues.\n", scalar @issues;
+for my $issue (@issues) {
+	review($issue);
+}
+print "\n";
+printf "Updated %d issues.\n", $updatecount;
+
+
+
+#
+# Subroutines
+#
+
+# Make replacements
+sub replace($) {
+	my $word = lc shift;
+	my $replace = $rules->{replace};
+	if (exists($replace->{$word})) {
+		return $replace->{$word};
+	}
+	return undef;
+}
+
+# Merge multiple labels
+sub merge($) {
+	my $set_ref = shift; # ref to set
+	my $i=0;
+	for my $mergeset (@merge_froms) {
+		if ($mergeset <= $$set_ref) {
+			$$set_ref = $$set_ref - $mergeset;
+			$$set_ref->insert($merge_tos[$i]);
+		}
+		$i++;
+	}
+}
+
+# Remove ignores from the set
+sub remove_ignores($) {
+	my $set_ref = shift;
+	# Loop through the labels in the set
+	for my $label ($$set_ref->members) {
+		# Loop through the ignores in the rules
+		for my $regex (@{$rules->{ignore}}) {
+			if ($label =~ /^$regex$/i) {
+				$$set_ref->delete($label);
+				last;
+			}
+		}
+	}
+}
+
+# Update the issue within Jira
+sub update_issue($$$) {
+	my $key = shift;
+	my $rem = shift;
+	my $add = shift;
+	print "updating Jira\n";
+	printf "removing: %s\n", $rem;
+	printf "adding: %s\n", $add;
+	my $updhash = { "update" => { "labels" => [] }};
+	for my $r ($rem->members) {
+		push $updhash->{update}{labels}, {"remove"=>$r};
+	}
+	for my $a ($add->members) {
+		push $updhash->{update}{labels}, {"add"=>$a};
+	}
+	my $json = encode_json($updhash);
+	printf "json: %s\n", $json;
+	$client->addHeader('Authorization', "Basic $cred");
+	$client->PUT($rules->{jiraurl}.'/rest/api/2/issue/'.$key,
+		$json,
+		{"Content-Type"=>"application/json"});
+	printf "%s\n", $client->responseContent();
+
+}
+
+# Review an issue's labels
+sub review($) {
+	my $issue = shift;
+	my $key = $issue->{key};
+
+	# Create a Set for the existing labels
+	my $old = Set::Scalar->new(@{$issue->{fields}{labels}});
+
+	# Filter out labels that should be ignored
+	remove_ignores(\$old);
+
+	# Create a new Set for labels to be modified
+	my $new = $old->copy;
+
+	# Loop through each label for replacements and capitalization
+	for my $l ($new->members) {
+		# Make replacements
+		my $dict = replace($l);
+		if (defined($dict)) {
+			$new->delete($l);
+			$new->insert($dict);
+
+		# Force lower case
+		} elsif ($l =~ /[A-Z]/) {
+			$new->delete($l);
+			$new->insert(lc $l);
+		}
+	}
+	# Merge multiple labels
+	# pass $new set by reference to avoid in-memory copying
+	# and to allow merge() to make the changes itself.
+	merge(\$new);
+
+	# Remove certain labels according to rules
+	$new->delete(@{$rules->{remove}});
+
+	# Compare original and new label sets to determine adds/removes
+	my $rem = $old - $new;
+	my $add = $new - $old;
+
+	printf "key: %s\n", $key;
+	printf "old: %s\n", $old;
+	printf "new: %s\n", $new;
+	printf "rem: %s\n", join(', ', $rem->members);
+	printf "add: %s\n", join(', ', $add->members);
+	print "\n";
+
+	# Perform the update in Jira
+	if (!$rem->is_empty || !$add->is_empty) {
+		$updatecount++;
+		update_issue($key, $rem, $add) unless $test;
+	}
+}
+
