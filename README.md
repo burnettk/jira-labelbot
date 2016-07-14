@@ -18,6 +18,7 @@ The following Perl modules are required:
 
 	Getopt::Long
 	REST::Client
+	IO::Socket::SSL
 	JSON
 	Set::Scalar
 
